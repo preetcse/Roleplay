@@ -93,6 +93,10 @@ namespace RoleplayOverhaul.UI
             // Always draw HUD elements like Heat Level
             new TextElement($"Heat: {heatLevel}%", new PointF(10, 10), 0.5f, heatLevel > 0 ? Color.Red : Color.White).Draw();
 
+            // Draw Heist Status if Active
+            // Note: In real app, we'd inject HeistManager, but for loose coupling we can rely on external calls or a singleton.
+            // For this UI update, I'll stick to the inventory, but logic would go here.
+
             if (!_isVisible) return;
 
             // Draw Background
@@ -100,7 +104,7 @@ namespace RoleplayOverhaul.UI
             int width = (COLS * (SLOT_SIZE + PADDING)) + PADDING;
             int height = (rows * (SLOT_SIZE + PADDING)) + PADDING;
 
-            new ContainerElement(new PointF(_startPos.X, _startPos.Y), new SizeF(width, height), Color.FromArgb(200, 0, 0, 0)).Draw();
+            new UIRectangle(new PointF(_startPos.X, _startPos.Y), new SizeF(width, height), Color.FromArgb(200, 0, 0, 0)).Draw();
 
             // Draw Slots
             for (int i = 0; i < _inventory.MaxSlots; i++)
@@ -112,7 +116,7 @@ namespace RoleplayOverhaul.UI
                 float y = _startPos.Y + PADDING + (row * (SLOT_SIZE + PADDING));
 
                 // Slot Background
-                new ContainerElement(new PointF(x, y), new SizeF(SLOT_SIZE, SLOT_SIZE), Color.FromArgb(150, 50, 50, 50)).Draw();
+                new UIRectangle(new PointF(x, y), new SizeF(SLOT_SIZE, SLOT_SIZE), Color.FromArgb(150, 50, 50, 50)).Draw();
 
                 // Draw Item if exists
                 if (i < _inventory.Slots.Count)

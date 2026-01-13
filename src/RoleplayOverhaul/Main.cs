@@ -20,6 +20,7 @@ namespace RoleplayOverhaul
         private GangManager _gangManager;
         private PropertyManager _propertyManager;
         private CharacterManager _characterManager;
+        private Missions.HeistManager _heistManager;
 
         public RoleplayMod()
         {
@@ -35,6 +36,7 @@ namespace RoleplayOverhaul
             _gangManager = new GangManager();
             _propertyManager = new PropertyManager();
             _characterManager = new CharacterManager();
+            _heistManager = new Missions.HeistManager();
 
             // Register Events
             Tick += OnTick;
@@ -47,6 +49,9 @@ namespace RoleplayOverhaul
                 _jobManager.RegisterJob(job);
             }
 
+            // Load Heists
+            _heistManager.RegisterHeist(new Missions.FleecaBankHeist(_crimeManager, _playerInventory));
+
             // Setup Default Data
             SetupInitialState();
         }
@@ -56,6 +61,9 @@ namespace RoleplayOverhaul
             // Starter Items (Now with hunger/thirst values)
             _playerInventory.AddItem(new FoodItem("burger", "Burger", "Delicious", "food_burger", 0.5f, 20, 30.0f, 5.0f), 2);
             _playerInventory.AddItem(new FoodItem("water", "Water", "Hydrating", "drink_water", 0.5f, 5, 5.0f, 40.0f), 2);
+
+            // Give Drill for testing heists
+            _playerInventory.AddItem(new Items.ToolItem("tool_drill", "Thermal Drill", "For bank vaults", "drill_icon", 5.0f), 1);
 
             // Check Licenses on start
             if (!_licenseManager.HasValidLicense(LicenseType.HealthInsurance))
@@ -76,6 +84,7 @@ namespace RoleplayOverhaul
             _prisonManager.OnTick();
             _propertyManager.CheckInteraction();
             _propertyManager.DailyUpdate();
+            _heistManager.OnTick();
 
             // Check for Arrest
             if (_crimeManager.WantedStars > 0 && GTA.Game.Player.WantedLevel == 0 && _prisonManager.SentenceTimeRemaining == 0)
@@ -117,6 +126,12 @@ namespace RoleplayOverhaul
             {
                 _dispatchManager.AttemptArrest();
                 _prisonManager.Imprison(120); // 2 mins if surrendered
+            }
+
+            // Start Heist Debug
+            if (e.KeyCode == System.Windows.Forms.Keys.H)
+            {
+                _heistManager.StartHeist("The Fleeca Job");
             }
         }
     }

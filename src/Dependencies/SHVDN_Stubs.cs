@@ -106,12 +106,21 @@ namespace GTA
             public void Draw() { }
         }
 
+        // Deprecated ContainerElement in favor of UIRectangle
         public class ContainerElement
         {
              public System.Drawing.PointF Position { get; set; }
              public System.Drawing.SizeF Size { get; set; }
-             public bool Enabled { get; set; }
              public System.Drawing.Color Color { get; set; }
+             public void Draw() { }
+        }
+
+        public class UIRectangle
+        {
+             public System.Drawing.PointF Position { get; set; }
+             public System.Drawing.SizeF Size { get; set; }
+             public System.Drawing.Color Color { get; set; }
+             public UIRectangle(System.Drawing.PointF pos, System.Drawing.SizeF size, System.Drawing.Color color) { }
              public void Draw() { }
         }
 
