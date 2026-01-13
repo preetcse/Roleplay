@@ -30,6 +30,12 @@ namespace RoleplayOverhaul
         private Core.VehicleManager _vehicleManager;
         private Core.CareerManager _careerManager;
         private Core.BusinessManager _businessManager;
+        private World.TrafficManager _trafficManager;
+        private World.PopulationManager _populationManager;
+        private Weapons.WeaponSystem _weaponSystem;
+        private Persistence.PersistenceManager _persistenceManager;
+        private Persistence.VehiclePersistence _vehiclePersistence;
+        private Core.WardrobeManager _wardrobeManager;
 
         public RoleplayMod()
         {
@@ -50,6 +56,17 @@ namespace RoleplayOverhaul
             _heistManager = new Missions.HeistManager();
             _activityManager = new Activities.ActivityManager();
             _careerManager = new Core.CareerManager();
+            _wardrobeManager = new Core.WardrobeManager();
+
+            // World Systems (Using Massive Data)
+            _trafficManager = new World.TrafficManager();
+            _populationManager = new World.PopulationManager();
+            _weaponSystem = new Weapons.WeaponSystem();
+
+            // Persistence
+            _persistenceManager = new Persistence.PersistenceManager();
+            _vehiclePersistence = new Persistence.VehiclePersistence();
+            _persistenceManager.LoadGame();
 
             // Banking & Vehicle Systems
             _bankingManager = new Banking.BankingManager();
@@ -121,6 +138,10 @@ namespace RoleplayOverhaul
             _vehicleManager.OnTick();
             _activityManager.OnTick();
             _businessManager.OnTick();
+            _trafficManager.OnTick();
+            _populationManager.OnTick();
+            _weaponSystem.OnTick();
+            _persistenceManager.OnTick();
 
             // Check for Arrest
             if (_crimeManager.WantedStars > 0 && GTA.Game.Player.WantedLevel == 0 && _prisonManager.SentenceTimeRemaining == 0)

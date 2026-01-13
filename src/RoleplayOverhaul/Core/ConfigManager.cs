@@ -8,6 +8,7 @@ namespace RoleplayOverhaul.Core
         public int SalaryMultiplier { get; set; } = 1;
         public int RentCost { get; set; } = 500;
         public bool AutoBank { get; set; } = true;
+        public bool AntiRepair { get; set; } = true; // Block instant repairs
 
         public ConfigManager()
         {
@@ -25,6 +26,7 @@ namespace RoleplayOverhaul.Core
                     if (line.StartsWith("SalaryMultiplier")) SalaryMultiplier = int.Parse(line.Split('=')[1]);
                     if (line.StartsWith("RentCost")) RentCost = int.Parse(line.Split('=')[1]);
                     if (line.StartsWith("AutoBank")) AutoBank = bool.Parse(line.Split('=')[1]);
+                    if (line.StartsWith("AntiRepair")) AntiRepair = bool.Parse(line.Split('=')[1]);
                 }
             }
         }
