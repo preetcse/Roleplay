@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using RoleplayOverhaul.Items;
+using RoleplayOverhaul.Core.Inventory; // Use New System
 
 namespace RoleplayOverhaul.Crafting
 {
@@ -7,12 +7,12 @@ namespace RoleplayOverhaul.Crafting
     {
         public string Name { get; set; }
         public Dictionary<string, int> RequiredItems { get; set; } // ItemID, Count
-        public Item ResultItem { get; set; }
+        public InventoryItem ResultItem { get; set; } // Updated Type
         public int ResultCount { get; set; }
         public float CraftingTime { get; set; } // In seconds
         public string RequiredPropModel { get; set; } // e.g. "prop_tool_bench02"
 
-        public Recipe(string name, Item result, int count, float time)
+        public Recipe(string name, InventoryItem result, int count, float time)
         {
             Name = name;
             ResultItem = result;

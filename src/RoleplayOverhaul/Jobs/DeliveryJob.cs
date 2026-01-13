@@ -11,16 +11,6 @@ namespace RoleplayOverhaul.Jobs
         public Vector3 CurrentDestination { get; private set; }
         private Vehicle _jobVehicle;
         private Blip _destBlip;
-
-        // Simple list of delivery points (Mocking map locations)
-        private static List<Vector3> _destinations = new List<Vector3>
-        {
-            new Vector3(100, 200, 20),
-            new Vector3(-500, 300, 20),
-            new Vector3(1200, -1500, 20),
-            new Vector3(-200, -500, 20),
-            new Vector3(800, 800, 20)
-        };
         private Random _random;
 
         public DeliveryJob(string name, string vehicle) : base(name)
@@ -40,13 +30,21 @@ namespace RoleplayOverhaul.Jobs
         {
             if (GTA.Game.Player.Character == null) return;
 
-            // Spawn near player
-            Vector3 spawnPos = GTA.Game.Player.Character.Position + new Vector3(5, 0, 0); // Simplified offset
+            // Find a safe spawn on the street near the player
+            Vector3 spawnOrigin = GTA.Game.Player.Character.Position + (GTA.Game.Player.Character.ForwardVector * 10f);
+            Vector3 spawnPos = World.GetNextPositionOnStreet(spawnOrigin, true);
 
-             try
+            try
             {
                 _jobVehicle = World.CreateVehicle(VehicleModel, spawnPos);
-                // if (_jobVehicle != null) { _jobVehicle.AddBlip(); }
+                if (_jobVehicle != null)
+                {
+                    _jobVehicle.PlaceOnGround();
+                    _jobVehicle.Rotation = GTA.Game.Player.Character.Rotation; // Align somewhat
+                    var b = _jobVehicle.AddBlip();
+                    b.Sprite = BlipSprite.PersonalVehicleCar;
+                    b.Name = Name + " Vehicle";
+                }
                 GTA.UI.Screen.ShowSubtitle($"Job Started. Get in the {VehicleModel}.");
             }
             catch (Exception ex)
@@ -59,13 +57,22 @@ namespace RoleplayOverhaul.Jobs
 
         private void SetNextDestination()
         {
-            CurrentDestination = _destinations[_random.Next(_destinations.Count)];
+            // Dynamic Location Generation: Pick a point in a radius, snap to street.
+            // This prevents "Ocean Spawns" by ensuring the API finds a road node.
+
+            Vector3 playerPos = GTA.Game.Player.Character.Position;
+            Vector3 randomOffset = new Vector3(_random.Next(-1500, 1500), _random.Next(-1500, 1500), 0);
+            Vector3 roughPos = playerPos + randomOffset;
+
+            // Critical Fix: Use SHVDN API to snap to nearest road.
+            CurrentDestination = World.GetNextPositionOnStreet(roughPos, true);
 
             if (_destBlip != null) _destBlip.Delete();
 
             _destBlip = World.CreateBlip(CurrentDestination);
-            _destBlip.Color = 66; // Yellow
+            _destBlip.Color = BlipColor.Yellow;
             _destBlip.ShowRoute = true;
+            _destBlip.Name = "Delivery Point";
 
             GTA.UI.Screen.ShowSubtitle($"New Delivery Assigned. Drive to destination.");
         }
@@ -83,16 +90,21 @@ namespace RoleplayOverhaul.Jobs
 
             float dist = GTA.Game.Player.Character.Position.DistanceTo(CurrentDestination);
 
-            // 50.0f is a generous radius since we can't verify Z coords accurately in blind dev
-            if (dist < 50.0f)
+            if (dist < 10.0f) // Tighter radius for realism
             {
-                // Draw marker logic would go here
-                GTA.UI.Screen.ShowHelpText("Press E to Deliver");
+                GTA.UI.Screen.ShowHelpText("Press ~INPUT_CONTEXT~ to Deliver");
 
                 if (GTA.Game.IsControlJustPressed(GTA.Control.Context))
                 {
-                    GTA.Game.Player.Money += 200;
-                    GTA.UI.Screen.ShowSubtitle("Delivery Complete! +$200");
+                    // Verify vehicle
+                    if (_jobVehicle != null && !GTA.Game.Player.Character.IsInVehicle(_jobVehicle))
+                    {
+                        GTA.UI.Screen.ShowSubtitle("You need the work vehicle!");
+                        return;
+                    }
+
+                    GTA.Game.Player.Money += 300;
+                    GTA.UI.Screen.ShowSubtitle("Delivery Complete! +$300");
                     SetNextDestination();
                 }
             }

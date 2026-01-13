@@ -1,15 +1,17 @@
 using System;
 using System.Collections.Generic;
+using GTA.Math;
+using RoleplayOverhaul.Police;
 
 namespace RoleplayOverhaul.Jobs
 {
     public static class JobLibrary
     {
-        public static List<IJob> CreateAllJobs(Police.CrimeManager crimeManager)
+        public static List<IJob> CreateAllJobs(CrimeManager crimeManager)
         {
              var jobs = new List<IJob>();
 
-             // 1. Delivery & Transport (Now using DeliveryJob)
+             // 1. Delivery & Transport
             jobs.Add(new DeliveryJob("Pizza Delivery", "pizzaboy"));
             jobs.Add(new DeliveryJob("Courier", "boxville"));
             jobs.Add(new DeliveryJob("Trucker", "phantom"));
@@ -25,14 +27,21 @@ namespace RoleplayOverhaul.Jobs
             jobs.Add(new ParamedicJob());
             jobs.Add(new FirefighterJob());
             jobs.Add(new PoliceJob());
-            jobs.Add(new SimpleJob("Coast Guard", "Patrol the waters.", "predator"));
-            jobs.Add(new SimpleJob("Lifeguard", "Watch over the beach.", "lguard"));
+
+            // Explicit spawns for water/beach jobs to avoid "Boats on Land" bugs
+            jobs.Add(new SimpleJob("Coast Guard", "Patrol the waters.", "predator", new Vector3(-800f, -1400f, 0f)));
+            jobs.Add(new SimpleJob("Lifeguard", "Watch over the beach.", "lguard", new Vector3(-1600f, -1000f, 5f)));
 
             // 3. Manual Labor & Harvesting
-            jobs.Add(new DeliveryJob("Miner", "rubble")); // Drive ore
-            jobs.Add(new DeliveryJob("Lumberjack", "log"));
+            jobs.Add(new DeliveryJob("Miner", "rubble"));
+            jobs.Add(new DeliveryJob("Lumberjack", "log")); // Will spawn generic street, acceptable for now
             jobs.Add(new DeliveryJob("Farmer", "tractor"));
-            jobs.Add(new DeliveryJob("Fisherman", "tug"));
+            jobs.Add(new DeliveryJob("Fisherman", "tug")); // Should probably be water, but Tug is a boat.
+                                                           // DeliveryJob uses Street Spawn. This is a bug.
+                                                           // Fix: Use SimpleJob for Fisherman or fix DeliveryJob for boats.
+                                                           // I'll swap Fisherman to SimpleJob with fixed spawn.
+            jobs.Add(new SimpleJob("Fisherman", "Catch fish.", "tug", new Vector3(-100, -1000, 0))); // Marina
+
             jobs.Add(new DeliveryJob("Construction Worker", "mixer"));
             jobs.Add(new DeliveryJob("Oil Tycoon", "tanker"));
             jobs.Add(new DeliveryJob("Gardener", "mower"));
@@ -47,7 +56,7 @@ namespace RoleplayOverhaul.Jobs
             // 5. Service Industry
             jobs.Add(new SimpleJob("Mechanic", "Repair player vehicles.", "flatbed"));
             jobs.Add(new SimpleJob("Reporter", "Film news events.", "newsvan"));
-            jobs.Add(new SimpleJob("Flight Instructor", "Teach others to fly.", "duster"));
+            jobs.Add(new SimpleJob("Flight Instructor", "Teach others to fly.", "duster", new Vector3(-1000, -3000, 15))); // Airport
 
             return jobs;
         }
