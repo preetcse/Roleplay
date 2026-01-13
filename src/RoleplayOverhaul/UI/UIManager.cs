@@ -2,8 +2,10 @@ using System;
 using System.Drawing;
 using System.Collections.Generic;
 using GTA.UI;
-using RoleplayOverhaul.Items;
 using GTA;
+using RoleplayOverhaul.Items;
+using RoleplayOverhaul.Core;
+using RoleplayOverhaul.Banking;
 
 namespace RoleplayOverhaul.UI
 {
@@ -18,10 +20,29 @@ namespace RoleplayOverhaul.UI
         private const int COLS = 5;
         private Point _startPos = new Point(200, 200);
 
-        public UIManager(Inventory inventory)
+        // Banking App
+        public bool IsBankingAppOpen { get; private set; }
+        private Banking.BankingManager _bank;
+
+        // HUD State (vHUD features)
+        private SurvivalManager _survival; // Need to inject survival manager
+
+        public UIManager(Inventory inventory, Banking.BankingManager bank)
         {
             _inventory = inventory;
+            _bank = bank;
             _isVisible = false;
+        }
+
+        public void SetSurvivalManager(SurvivalManager survival)
+        {
+            _survival = survival;
+        }
+
+        public void ToggleBankingApp()
+        {
+            IsBankingAppOpen = !IsBankingAppOpen;
+            if (IsBankingAppOpen) _isVisible = false; // Close inv if bank open
         }
 
         public void ToggleInventory()
@@ -76,6 +97,12 @@ namespace RoleplayOverhaul.UI
                         // Handle consumption (Stack reduction)
                         if (stack.Item.IsUsable)
                         {
+                            // Hook into Survival System if it's food
+                            if (stack.Item is FoodItem food && _survival != null)
+                            {
+                                _survival.Consume(food);
+                            }
+
                             stack.Count--;
                             if (stack.Count <= 0)
                             {
@@ -93,11 +120,20 @@ namespace RoleplayOverhaul.UI
             // Always draw HUD elements like Heat Level
             new TextElement($"Heat: {heatLevel}%", new PointF(10, 10), 0.5f, heatLevel > 0 ? Color.Red : Color.White).Draw();
 
+            // vHUD: Draw Bars
+            DrawHUD();
+
             // Draw Heist Status if Active
             // Note: In real app, we'd inject HeistManager, but for loose coupling we can rely on external calls or a singleton.
             // For this UI update, I'll stick to the inventory, but logic would go here.
 
             if (!_isVisible) return;
+
+            if (IsBankingAppOpen)
+            {
+                DrawBankingApp();
+                return; // Exclusive view
+            }
 
             // Draw Background
             int rows = (int)Math.Ceiling((double)_inventory.MaxSlots / COLS);
@@ -133,6 +169,59 @@ namespace RoleplayOverhaul.UI
                         new TextElement(stack.Count.ToString(), new PointF(x + SLOT_SIZE - 20, y + SLOT_SIZE - 20), 0.35f, Color.Yellow).Draw();
                     }
                 }
+            }
+        }
+
+        private void DrawBankingApp()
+        {
+             // Phone-like UI background
+             PointF pos = new PointF(1500, 500);
+             new UIRectangle(pos, new SizeF(300, 500), Color.FromArgb(255, 30, 30, 30)).Draw();
+             new TextElement("Maze Bank", new PointF(pos.X + 100, pos.Y + 20), 0.6f, Color.Red).Draw();
+
+             new TextElement($"Balance: ${_bank.Balance:N0}", new PointF(pos.X + 20, pos.Y + 80), 0.5f, Color.White).Draw();
+             new TextElement($"Debt: ${_bank.Debt:N0}", new PointF(pos.X + 20, pos.Y + 120), 0.5f, Color.Red).Draw();
+
+             new TextElement("Recent Transactions:", new PointF(pos.X + 20, pos.Y + 180), 0.4f, Color.Gray).Draw();
+
+             int i = 0;
+             foreach(var t in _bank.History) // In real app, take last 5 reverse
+             {
+                 if (i > 5) break;
+                 new TextElement($"{t.Description}: ${t.Amount}", new PointF(pos.X + 20, pos.Y + 220 + (i*30)), 0.35f, t.Amount > 0 ? Color.Green : Color.Red).Draw();
+                 i++;
+             }
+        }
+
+        private void DrawHUD()
+        {
+            if (_survival == null) return;
+
+            // Draw Bottom Left Bars (GTA V style area)
+            // Hunger (Orange)
+            float hungerW = _survival.Hunger * 2.0f;
+            new UIRectangle(new PointF(20, 1000), new SizeF(200, 10), Color.FromArgb(100, 0, 0, 0)).Draw(); // BG
+            new UIRectangle(new PointF(20, 1000), new SizeF(hungerW, 10), Color.Orange).Draw();
+
+            // Thirst (Blue)
+            float thirstW = _survival.Thirst * 2.0f;
+            new UIRectangle(new PointF(20, 1015), new SizeF(200, 10), Color.FromArgb(100, 0, 0, 0)).Draw(); // BG
+            new UIRectangle(new PointF(20, 1015), new SizeF(thirstW, 10), Color.Blue).Draw();
+
+            // Fatigue (Gray)
+            float fatigueW = _survival.Sleep * 2.0f;
+            new UIRectangle(new PointF(20, 1030), new SizeF(200, 10), Color.FromArgb(100, 0, 0, 0)).Draw(); // BG
+            new UIRectangle(new PointF(20, 1030), new SizeF(fatigueW, 10), Color.Gray).Draw();
+
+            // Speedometer (Text)
+            if (GTA.Game.Player.Character.IsInVehicle())
+            {
+                var veh = GTA.Game.Player.Character.CurrentVehicle;
+                float speedKmh = veh.Speed * 3.6f;
+                float fuel = 100.0f; // Mock Fuel
+
+                new TextElement($"{speedKmh:F0} KM/H", new PointF(1700, 900), 1.0f, Color.White).Draw();
+                new TextElement($"Fuel: {fuel}%", new PointF(1700, 950), 0.5f, Color.Yellow).Draw();
             }
         }
     }

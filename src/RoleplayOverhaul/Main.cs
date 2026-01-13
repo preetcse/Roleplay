@@ -21,14 +21,21 @@ namespace RoleplayOverhaul
         private PropertyManager _propertyManager;
         private CharacterManager _characterManager;
         private Missions.HeistManager _heistManager;
+        private Banking.BankingManager _bankingManager;
+        private Banking.BillManager _billManager;
+        private Banking.ATMManager _atmManager;
+        private Banking.BankInterior _bankInterior;
+        private ConfigManager _configManager;
 
         public RoleplayMod()
         {
+            // Initialize Config
+            _configManager = new ConfigManager();
+
             // Initialize Core Systems
-            _playerInventory = new Inventory(30, 100.0f); // Increased size
+            _playerInventory = new Inventory(30, 100.0f);
             _licenseManager = new LicenseManager(_playerInventory);
             _jobManager = new JobManager();
-            _uiManager = new UIManager(_playerInventory);
             _crimeManager = new Police.CrimeManager();
             _dispatchManager = new Police.DispatchManager(_crimeManager);
             _survivalManager = new SurvivalManager();
@@ -37,6 +44,18 @@ namespace RoleplayOverhaul
             _propertyManager = new PropertyManager();
             _characterManager = new CharacterManager();
             _heistManager = new Missions.HeistManager();
+
+            // Banking Systems
+            _bankingManager = new Banking.BankingManager();
+            _bankingManager.AutoBankIncome = _configManager.AutoBank;
+
+            _billManager = new Banking.BillManager(_bankingManager);
+            _atmManager = new Banking.ATMManager(_bankingManager);
+            _bankInterior = new Banking.BankInterior(_bankingManager);
+
+            // UI needs bank ref now
+            _uiManager = new UIManager(_playerInventory, _bankingManager);
+            _uiManager.SetSurvivalManager(_survivalManager); // Inject for vHUD
 
             // Register Events
             Tick += OnTick;
@@ -86,6 +105,12 @@ namespace RoleplayOverhaul
             _propertyManager.DailyUpdate();
             _heistManager.OnTick();
 
+            // Banking Ticks
+            _bankingManager.OnTick();
+            _billManager.OnTick();
+            _atmManager.OnTick();
+            _bankInterior.OnTick();
+
             // Check for Arrest
             if (_crimeManager.WantedStars > 0 && GTA.Game.Player.WantedLevel == 0 && _prisonManager.SentenceTimeRemaining == 0)
             {
@@ -132,6 +157,12 @@ namespace RoleplayOverhaul
             if (e.KeyCode == System.Windows.Forms.Keys.H)
             {
                 _heistManager.StartHeist("The Fleeca Job");
+            }
+
+            // Open Banking App (Phone shortcut)
+            if (e.KeyCode == System.Windows.Forms.Keys.B)
+            {
+                _uiManager.ToggleBankingApp();
             }
         }
     }

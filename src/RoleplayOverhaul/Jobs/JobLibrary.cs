@@ -13,7 +13,7 @@ namespace RoleplayOverhaul.Jobs
             jobs.Add(new DeliveryJob("Pizza Delivery", "pizzaboy"));
             jobs.Add(new DeliveryJob("Courier", "boxville"));
             jobs.Add(new DeliveryJob("Trucker", "phantom"));
-            jobs.Add(new DeliveryJob("Taxi Driver", "taxi"));
+            jobs.Add(new TaxiJob());
             jobs.Add(new DeliveryJob("Bus Driver", "bus"));
             jobs.Add(new DeliveryJob("Trash Collector", "trash"));
             jobs.Add(new DeliveryJob("PostOp Driver", "postop"));
@@ -22,11 +22,9 @@ namespace RoleplayOverhaul.Jobs
             jobs.Add(new DeliveryJob("Forklift Operator", "forklift"));
 
             // 2. Emergency Services
-            // For now, these remain SimpleJob until AmbulanceJob/PoliceJob logic is built
-            // or we could adapt DeliveryJob to be "Go to Incident"
-            jobs.Add(new SimpleJob("Paramedic", "Save injured civilians.", "ambulance"));
+            jobs.Add(new ParamedicJob());
             jobs.Add(new SimpleJob("Firefighter", "Put out fires.", "firetruck"));
-            jobs.Add(new SimpleJob("Police Officer", "Patrol and arrest criminals.", "police"));
+            jobs.Add(new PoliceJob());
             jobs.Add(new SimpleJob("Coast Guard", "Patrol the waters.", "predator"));
             jobs.Add(new SimpleJob("Lifeguard", "Watch over the beach.", "lguard"));
 

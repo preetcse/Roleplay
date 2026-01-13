@@ -41,15 +41,12 @@ namespace RoleplayOverhaul.Jobs
             if (GTA.Game.Player.Character == null) return;
 
             // Spawn near player
-            Vector3 spawnPos = GTA.Game.Player.Character.Position + GTA.Game.Player.Character.ForwardVector * 5.0f;
+            Vector3 spawnPos = GTA.Game.Player.Character.Position + new Vector3(5, 0, 0); // Simplified offset
 
-            // In real mod: _jobVehicle = World.CreateVehicle(VehicleModel, spawnPos);
-            // Mocking creation for compilation
              try
             {
-                // We use a mock call here because we can't test actual spawning
-                // _jobVehicle = World.CreateVehicle(VehicleModel, spawnPos);
-                // if (_jobVehicle != null) { _jobVehicle.AddBlip(); }
+                _jobVehicle = World.CreateVehicle(VehicleModel, spawnPos);
+                // if (_jobVehicle != null) { _jobVehicle.AddBlip(); } // AddBlip not in stub Vehicle yet but fine
                 GTA.UI.Screen.ShowSubtitle($"Job Started. Get in the {VehicleModel}.");
             }
             catch { }
@@ -61,9 +58,9 @@ namespace RoleplayOverhaul.Jobs
 
             if (_destBlip != null) _destBlip.Delete();
 
-            // _destBlip = World.CreateBlip(CurrentDestination);
-            // _destBlip.Color = BlipColor.Yellow;
-            // _destBlip.ShowRoute = true;
+            _destBlip = World.CreateBlip(CurrentDestination);
+            _destBlip.Color = 66; // Yellow
+            _destBlip.ShowRoute = true;
 
             GTA.UI.Screen.ShowSubtitle($"New Delivery Assigned. Drive to destination.");
         }

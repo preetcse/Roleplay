@@ -133,6 +133,26 @@ namespace GTA
         }
     }
 
+    public class Blip
+    {
+        public bool ShowRoute { get; set; }
+        public int Color { get; set; } // Simplified from enum
+        public void Delete() { }
+    }
+
+    public class Prop : Entity
+    {
+        public int Model { get; set; } // Simplified Model accessor
+    }
+
+    public static class World
+    {
+        public static Vehicle CreateVehicle(string model, Vector3 position) { return new Vehicle(); }
+        public static Ped CreatePed(string model, Vector3 position, float heading = 0f) { return new Ped(); }
+        public static Blip CreateBlip(Vector3 position) { return new Blip(); }
+        public static Prop[] GetNearbyProps(Vector3 position, float radius) { return new Prop[0]; }
+    }
+
     namespace Native
     {
         public static class Function
@@ -140,6 +160,16 @@ namespace GTA
             public static void Call(Hash hash, params object[] arguments) { }
             public static T Call<T>(Hash hash, params object[] arguments) { return default(T); }
         }
-        public enum Hash { GET_PLAYER_PED, SET_ENTITY_COORDS } // Add hashes as needed
+
+        // Extended Hash list for uncommented code
+        public enum Hash
+        {
+            GET_PLAYER_PED,
+            SET_ENTITY_COORDS,
+            SET_PED_HEAD_BLEND_DATA,
+            SET_PED_FACE_FEATURE,
+            SET_PLAYER_WANTED_LEVEL_NOW,
+            SET_POLICE_IGNORE_PLAYER
+        }
     }
 }
