@@ -4,6 +4,10 @@ using RoleplayOverhaul.Core;
 using RoleplayOverhaul.Items;
 using RoleplayOverhaul.Jobs;
 using RoleplayOverhaul.UI;
+using RoleplayOverhaul.Activities;
+using RoleplayOverhaul.Jobs.Leveling;
+using RoleplayOverhaul.Crafting; // Added
+using RoleplayOverhaul.Activities.Illegal; // Added
 
 namespace RoleplayOverhaul
 {
@@ -36,6 +40,20 @@ namespace RoleplayOverhaul
         private Persistence.PersistenceManager _persistenceManager;
         private Persistence.VehiclePersistence _vehiclePersistence;
         private Core.WardrobeManager _wardrobeManager;
+
+        // Minigames
+        private CookingMinigame _cookingMinigame;
+        private MiningMinigame _miningMinigame;
+        private OilDrillingMinigame _oilDrillingMinigame;
+        private TreasureHuntingMinigame _treasureHuntingMinigame;
+        private LumberjackMinigame _lumberjackMinigame;
+
+        // New Systems
+        private CraftingManager _craftingManager;
+        private CraftingMenu _craftingMenu;
+        private InteractionSystem _interactionSystem;
+        private DrugRun _drugRun;
+        private GangRaid _gangRaid;
 
         public RoleplayMod()
         {
@@ -82,6 +100,20 @@ namespace RoleplayOverhaul
             _uiManager = new UIManager(_playerInventory, _bankingManager);
             _uiManager.SetSurvivalManager(_survivalManager); // Inject for vHUD
 
+            // Initialize Minigames
+            _cookingMinigame = new CookingMinigame();
+            _miningMinigame = new MiningMinigame();
+            _oilDrillingMinigame = new OilDrillingMinigame();
+            _treasureHuntingMinigame = new TreasureHuntingMinigame();
+            _lumberjackMinigame = new LumberjackMinigame();
+
+            // Initialize New Systems
+            _craftingManager = new CraftingManager(_playerInventory);
+            _craftingMenu = new CraftingMenu(_playerInventory, _craftingManager);
+            _interactionSystem = new InteractionSystem();
+            _drugRun = new DrugRun();
+            _gangRaid = new GangRaid();
+
             // Register Events
             Tick += OnTick;
             KeyDown += OnKeyDown;
@@ -108,6 +140,9 @@ namespace RoleplayOverhaul
 
             // Give Drill for testing heists
             _playerInventory.AddItem(new Items.ToolItem("tool_drill", "Thermal Drill", "For bank vaults", "drill_icon", 5.0f), 1);
+
+            // Give Raw Materials for crafting
+            _playerInventory.AddItem(new Items.ResourceItem("iron_ore", "Iron Ore", "Needs smelting", "rock_icon", 5), 5);
 
             // Check Licenses on start
             if (!_licenseManager.HasValidLicense(LicenseType.HealthInsurance))
@@ -145,6 +180,21 @@ namespace RoleplayOverhaul
                 _weaponSystem.OnTick();
                 _persistenceManager.OnTick();
 
+                // Minigame Ticks
+                _cookingMinigame.OnTick();
+                _miningMinigame.OnTick();
+                _oilDrillingMinigame.OnTick();
+                _treasureHuntingMinigame.OnTick();
+                _lumberjackMinigame.OnTick();
+
+                // New Systems Tick
+                _craftingManager.OnTick();
+                _craftingMenu.Draw();
+                _craftingMenu.HandleInput();
+                _interactionSystem.OnTick();
+                _drugRun.OnTick();
+                _gangRaid.OnTick();
+
                 // Check for Arrest
                 if (_crimeManager.WantedStars > 0 && GTA.Game.Player.WantedLevel == 0 && _prisonManager.SentenceTimeRemaining == 0)
                 {
@@ -169,6 +219,12 @@ namespace RoleplayOverhaul
             if (e.KeyCode == System.Windows.Forms.Keys.F5)
             {
                 _uiManager.ToggleInventory();
+            }
+
+            // F4 for Crafting Menu
+            if (e.KeyCode == System.Windows.Forms.Keys.F4)
+            {
+                _craftingMenu.Toggle();
             }
 
             // Debug: Start a test
@@ -209,6 +265,17 @@ namespace RoleplayOverhaul
             {
                 _activityManager.StartActivity("Zombie Survival");
             }
+
+            // Minigame Hotkeys (For testing)
+            if (e.KeyCode == System.Windows.Forms.Keys.NumPad1) _cookingMinigame.StartCooking();
+            if (e.KeyCode == System.Windows.Forms.Keys.NumPad2) _miningMinigame.StartMining();
+            if (e.KeyCode == System.Windows.Forms.Keys.NumPad3) _oilDrillingMinigame.StartDrilling();
+            if (e.KeyCode == System.Windows.Forms.Keys.NumPad4) _treasureHuntingMinigame.StartHunt(Game.Player.Character.Position + new GTA.Math.Vector3(50, 0, 0));
+            if (e.KeyCode == System.Windows.Forms.Keys.NumPad5) _lumberjackMinigame.StartChopping();
+
+            // Illegal Activity Debug
+            if (e.KeyCode == System.Windows.Forms.Keys.NumPad6) _drugRun.StartMission();
+            if (e.KeyCode == System.Windows.Forms.Keys.NumPad7) _gangRaid.StartRaid(Game.Player.Character.Position + new GTA.Math.Vector3(50,50,0), "Ballas");
         }
     }
 }
