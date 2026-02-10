@@ -66,7 +66,7 @@ There are many ways to deploy Xray. This repo sits in the middle ground between 
 ```bash
 # 1) Clone or copy this repository to the server
 cd /root
-git clone <your-fork-or-this-repo-url> vless-xtls-vision-installer
+git clone https://github.com/braydos-h/vless-xtls-vision-installer.git
 cd vless-xtls-vision-installer
 
 # 2) Run installer
