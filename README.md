@@ -1,29 +1,53 @@
 # VLESS + REALITY + XTLS Vision Bootstrap Installer
 
-A production-oriented **single-file Bash installer** for deploying **Xray-core** with **VLESS + REALITY + XTLS Vision** on a fresh Linux VPS.
+Production-oriented, single-file Bash bootstrap for `Xray-core` with `VLESS + REALITY + XTLS Vision`, focused on:
 
-This project is for operators who want a setup that is:
-- fast to deploy,
-- repeatable to re-run,
-- opinionated on security hardening,
-- and easy to maintain over time.
+- fast first deployment,
+- repeatable operations,
+- built-in hardening choices,
+- and reliable behavior in restrictive network conditions.
+
+> [!IMPORTANT]
+> This README is beginner-first. If this is your first Xray deployment, follow sections in order from **Quick Start** through **Post-Install Validation**.
+
+> [!WARNING]
+> Use only where you are authorized. Network transport tooling may be regulated in your country or organization. You are responsible for lawful and ethical use.
 
 ---
 
-## What this installer does
+## Table of Contents
 
-`xray_reality_bootstrap.sh` handles a full lifecycle:
+- [At a Glance](#at-a-glance)
+- [30-Second Quick Start](#30-second-quick-start)
+- [Before You Run](#before-you-run)
+- [Why This Works Well Against DPI (Technical)](#why-this-works-well-against-dpi-technical)
+- [How Installation Works](#how-installation-works)
+- [Install Modes](#install-modes)
+- [Wizard Prompt Reference](#wizard-prompt-reference)
+- [Post-Install Validation](#post-install-validation)
+- [Command Reference](#command-reference)
+- [Generated Client Artifacts](#generated-client-artifacts)
+- [Day-2 Operations Cookbook](#day-2-operations-cookbook)
+- [Troubleshooting Matrix](#troubleshooting-matrix)
+- [Backup and Rollback](#backup-and-rollback)
+- [Security Model and Hardening Notes](#security-model-and-hardening-notes)
+- [Glossary](#glossary)
+- [FAQ](#faq)
+- [License](#license)
 
-- interactive install + reconfiguration wizard,
-- Xray install/update/repair workflows,
-- REALITY key + UUID + shortId management,
-- generated client outputs (URI, JSON, QR),
-- firewall + SSH hardening integration,
-- optional fail2ban and unattended upgrades,
-- optional scheduled Xray updates via systemd timer,
-- diagnostics/status/reprint/shortId rotation operations.
+---
 
-Supported modes:
+## At a Glance
+
+| If you want to... | Start here |
+|---|---|
+| Get online quickly | [30-Second Quick Start](#30-second-quick-start) |
+| Understand DPI resilience mechanics | [Why This Works Well Against DPI (Technical)](#why-this-works-well-against-dpi-technical) |
+| Run fully automated install | [Install Modes](#install-modes) |
+| Verify if everything is healthy | [Post-Install Validation](#post-install-validation) |
+| Fix failed connections | [Troubleshooting Matrix](#troubleshooting-matrix) |
+
+Supported script modes:
 
 ```bash
 install | update | repair | status | diagnose | reprint | rotate-shortid | uninstall
@@ -31,185 +55,414 @@ install | update | repair | status | diagnose | reprint | rotate-shortid | unins
 
 ---
 
-## Why use this vs other approaches?
-
-There are many ways to deploy Xray. This repo sits in the middle ground between "manual config editing" and "full control panel stack."
-
-| Approach | Pros | Cons | Best for |
-|---|---|---|---|
-| Manual Xray setup (raw docs + hand editing) | Maximum control, minimal abstraction | Easy to miss hardening steps; slower repeatability | Experts who want total manual control |
-| Xray panel/web UI ecosystems | Friendly UX; multi-user management | More moving parts (DB, web panel, extra services), larger attack surface | Commercial/multi-tenant operations |
-| **This script (single Bash bootstrap)** | Fast, transparent, no panel dependency, repeatable operations, built-in hardening workflow | Single-node/operator focused, Linux + root oriented, opinionated defaults | Self-hosters, small teams, infra engineers |
-
-### Practical comparison highlights
-
-- **Compared to manual setup:** you get safer defaults and fewer "forgot to configure X" mistakes.
-- **Compared to heavy panel stacks:** you keep operational footprint small and close to upstream Xray behavior.
-- **Compared to copy-paste scripts:** this one includes maintenance commands (`repair`, `diagnose`, `reprint`, `rotate-shortid`) for day-2 operations.
-
----
-
-## Requirements
-
-- Debian/Ubuntu-like host with `systemd`
-- root privileges (`sudo -i` or `sudo bash ...`)
-- public VPS/IP and a domain you control
-- DNS A/AAAA record pointed to your server
-- outbound network access to install packages and download Xray
-
-> The script is intended for fresh hosts and will apply system-level changes (firewall, SSH hardening choices, services).
-
----
-
-## Quick start
+## 30-Second Quick Start
 
 ```bash
-# 1) Clone or copy this repository to the server
+# 1) Clone on your VPS
 cd /root
 git clone https://github.com/braydos-h/vless-xtls-vision-installer.git
 cd vless-xtls-vision-installer
 
-# 2) Run installer or just do install but this works well
-bash xray_reality_bootstrap.sh install --auto --non-interactive
+# 2) Run interactive install
+sudo bash xray_reality_bootstrap.sh install
 ```
 
-Then follow the wizard prompts.
-
----
-
-## Wizard flow (what you will be asked)
-
-The installer asks for:
-
-1. **ServerName + DEST endpoint** (REALITY camouflage target)
-2. **Primary listen port + optional fallback port**
-3. **Firewall style** (`nftables` or `ufw`)
-4. **SSH hardening options** (port change, password auth toggle)
-5. **Update policy** (OS unattended upgrades + Xray manual/weekly/daily)
-6. **Logging profile** (`minimal` or `verbose`)
-7. **Client profile naming + shortId count + private IP egress policy**
-
-It also validates DEST reachability/TLS viability before finalizing configuration.
-
----
-
-## Commands you will use after install
-
-From the repository copy:
+After first install, use the persisted helper:
 
 ```bash
-sudo bash xray_reality_bootstrap.sh status
-sudo bash xray_reality_bootstrap.sh diagnose
-sudo bash xray_reality_bootstrap.sh update
-sudo bash xray_reality_bootstrap.sh repair
-sudo bash xray_reality_bootstrap.sh reprint
-sudo bash xray_reality_bootstrap.sh rotate-shortid
-sudo bash xray_reality_bootstrap.sh uninstall
+sudo /usr/local/sbin/xray-reality-bootstrap status
 ```
 
-After first install, the script also persists itself as:
+> [!TIP]
+> If the wizard asks about SSH hardening, keep a second SSH session open until you confirm new settings work.
 
-```bash
-sudo /usr/local/sbin/xray-reality-bootstrap <mode>
+---
+
+## Before You Run
+
+### Preflight Checklist
+
+- [ ] Fresh VPS or host where system-level firewall/SSH changes are acceptable
+- [ ] Root access (`sudo` works)
+- [ ] Supported OS: Debian 12, Ubuntu 22.04, or Ubuntu 24.04
+- [ ] Domain you control with DNS `A`/`AAAA` record pointing to this server
+- [ ] Outbound internet from VPS (for package install, Xray download, TLS probe)
+- [ ] Port plan decided (`443` recommended primary)
+
+### Requirements and Defaults
+
+| Item | Value |
+|---|---|
+| Supported OS | Debian 12, Ubuntu 22.04, Ubuntu 24.04 |
+| Service manager | `systemd` |
+| Script file | `xray_reality_bootstrap.sh` |
+| Persisted helper path | `/usr/local/sbin/xray-reality-bootstrap` |
+| Xray config path | `/etc/xray/config.json` |
+| State path | `/etc/xray/bootstrap-state.env` |
+| Options profile path | `/etc/xray/bootstrap-options.json` |
+| Client export directory | `/root/xray-client-configs` |
+| Default primary port | `443` |
+| Default update policy | `weekly` |
+| Default logging profile | `minimal` |
+
+---
+
+## Why This Works Well Against DPI (Technical)
+
+This section is intentionally technical, but still operationally practical.
+
+### 1) REALITY handshake camouflage
+
+The server is configured with a `serverName` and `dest` target. During connection establishment, traffic characteristics are shaped to align with legitimate TLS destinations, reducing obvious protocol signatures.
+
+### 2) uTLS client fingerprinting
+
+Generated client configs use `fingerprint: chrome`, which helps present common browser-like TLS behavior rather than uncommon custom stacks.
+
+### 3) XTLS Vision flow efficiency
+
+`flow=xtls-rprx-vision` reduces unnecessary overhead and helps maintain stable performance under constrained paths where noisy or inefficient tunnels degrade quickly.
+
+### 4) ShortId controls and rotation
+
+The server can accept multiple REALITY `shortIds`; the script can rotate them (`rotate-shortid`) without replacing UUID/keypair. This supports ongoing hygiene when a profile needs to be cycled.
+
+### 5) Controlled fallback behavior
+
+A local Nginx camouflage service is bound on loopback (default `127.0.0.1:18080`) and used as fallback destination handling. This helps avoid obvious dead-end behavior on non-matching flows.
+
+### Connection Model
+
+```mermaid
+flowchart LR
+    C[Client: VLESS + REALITY + XTLS Vision] --> X[Xray Inbound :443/:fallback]
+    X -->|REALITY settings| T[TLS-looking handshake behavior]
+    X -->|Validated route| O[Normal outbound]
+    X -->|Fallback path| N[Nginx camouflage on 127.0.0.1:18080]
+```
+
+### What this does not guarantee
+
+- It does not guarantee universal bypass on every network.
+- It does not prevent endpoint/device compromise.
+- It does not remove the need for good OPSEC and credential handling.
+- It does not make illegal use acceptable.
+
+---
+
+## How Installation Works
+
+```mermaid
+flowchart TD
+    A[Run install mode] --> B[OS and root checks]
+    B --> C[Wizard or auto-profile load]
+    C --> D[REALITY destination TLS reachability probe]
+    D --> E[Install dependencies]
+    E --> F[Install/Update Xray binary]
+    F --> G[Generate or reuse UUID + REALITY keys + shortIds]
+    G --> H[Write config + systemd unit]
+    H --> I[Configure SSH hardening + firewall + fail2ban + updates]
+    I --> J[Start services and persist state]
+    J --> K[Generate client URI/JSON/QR artifacts]
 ```
 
 ---
 
-## Generated client files
+## Install Modes
 
-Client artifacts are written to:
-
-```bash
-/root/xray-client-configs
-```
-
-Typical outputs include:
-- primary/fallback `vless://` URI text files,
-- v2rayN / v2rayNG JSON,
-- sing-box JSON (plus Apple-client compatible copy),
-- shortId list,
-- summary text,
-- QR text/PNG (when `qrencode` is available).
-
-Keep these files secret. They include credentials and connection metadata.
-
----
-
-## Security and ops notes
-
-- The script is opinionated but still requires operator judgment.
-- Test SSH access in a second session before confirming SSH hardening changes.
-- Back up `/etc/xray` and client artifacts before major changes.
-- Prefer `diagnose` before troubleshooting manually.
-- Use `rotate-shortid` periodically if your threat model benefits from routine identifier rotation.
-
----
-
-## Common workflow examples
-
-### 1) Initial deployment
+### Interactive (recommended for first run)
 
 ```bash
 sudo bash xray_reality_bootstrap.sh install
 ```
 
-### 2) Weekly maintenance check
+### Auto-profile mode
 
 ```bash
-sudo bash xray_reality_bootstrap.sh status
-sudo bash xray_reality_bootstrap.sh diagnose
+sudo bash xray_reality_bootstrap.sh install --auto --non-interactive
 ```
 
-### 3) Update Xray binary safely
+### Custom profile path
 
 ```bash
-sudo bash xray_reality_bootstrap.sh update
+sudo bash xray_reality_bootstrap.sh install --auto --non-interactive --profile-json /path/to/profile.json
 ```
 
-### 4) Regenerate/share client exports without changing secrets
+### Non-interactive rules
 
-```bash
-sudo bash xray_reality_bootstrap.sh reprint
+- `install --non-interactive` requires `--auto`.
+- If default profile is missing, the script can materialize an embedded template.
+- Existing deployment detection menu is interactive by design unless running with explicit mode flags.
+
+<details>
+<summary>Example auto-profile JSON template</summary>
+
+```json
+{
+  "profile_format": "1",
+  "SERVER_NAME": "www.cloudflare.com",
+  "DEST_ENDPOINT": "www.cloudflare.com:443",
+  "LISTEN_PORT": "443",
+  "FALLBACK_PORT": "",
+  "FIREWALL_STYLE": "nftables",
+  "SSH_PORT": "22",
+  "CHANGE_SSH_PORT": "no",
+  "HAS_SSH_KEYS": "yes",
+  "DISABLE_PASSWORD_AUTH": "yes",
+  "FAIL2BAN_ENABLED": "yes",
+  "UNATTENDED_UPGRADES_ENABLED": "yes",
+  "XRAY_UPDATE_POLICY": "weekly",
+  "LOG_PROFILE": "minimal",
+  "PROFILE_NAME": "reality-main",
+  "SHORT_ID_LABEL": "main",
+  "SHORT_ID_COUNT": "3",
+  "BLOCK_PRIVATE_OUTBOUND": "yes",
+  "CAMOUFLAGE_WEB_PORT": "18080"
+}
 ```
 
-### 5) Rotate REALITY shortIds only
+</details>
+
+---
+
+## Wizard Prompt Reference
+
+| Step | What you choose | Default | Why it matters | Beginner-safe choice |
+|---|---|---|---|---|
+| 1 | `serverName` + `DEST_ENDPOINT` | `www.cloudflare.com` + `:443` | Defines REALITY impersonation target and TLS probe behavior | Use a stable high-traffic TLS site and keep port `443` |
+| 2 | Primary + optional fallback port | `443`, fallback off | Controls reachability and surface area | Start with primary `443`, skip fallback initially |
+| 3 | Firewall style | `nftables` | Host policy enforcement | Keep `nftables` unless your team standard is `ufw` |
+| 4 | SSH hardening | keep `22`, key-based checks | Prevent lockout and improve admin security | Keep defaults unless you already validated key login |
+| 5 | OS/Xray update policy | OS upgrades on, Xray `weekly` | Patch cadence and operational effort | Keep OS upgrades on + weekly Xray |
+| 6 | Logging profile | `minimal` | Troubleshooting detail vs exposure/noise | Use `minimal`; switch to verbose only during debug |
+| 7 | Client profile + shortIds + private egress block | shortIds `3`, block private egress on | Affects client artifacts and exposure controls | Keep 3 shortIds and block private egress |
+
+---
+
+## Post-Install Validation
+
+Run this in order right after install:
 
 ```bash
-sudo bash xray_reality_bootstrap.sh rotate-shortid
+sudo /usr/local/sbin/xray-reality-bootstrap status
+sudo /usr/local/sbin/xray-reality-bootstrap diagnose
+sudo /usr/local/bin/xray -test -config /etc/xray/config.json
+sudo systemctl is-active xray
+sudo curl -fsS http://127.0.0.1:18080/healthz
+```
+
+Expected signals:
+
+| Check | Healthy signal |
+|---|---|
+| `systemctl is-active xray` | `active` |
+| `xray -test -config ...` | no fatal parse/runtime errors |
+| `curl .../healthz` | returns `ok` |
+| `status` mode | Xray + Nginx active, expected listen ports visible |
+| `diagnose` mode | no persistent config/firewall/service errors |
+
+If any check fails, jump to [Troubleshooting Matrix](#troubleshooting-matrix).
+
+---
+
+## Command Reference
+
+Use either:
+
+- repo-local command: `sudo bash xray_reality_bootstrap.sh <mode>`
+- persisted helper: `sudo /usr/local/sbin/xray-reality-bootstrap <mode>`
+
+| Mode | What it does | Typical use |
+|---|---|---|
+| `install` | Full wizard install/reconfigure | First deployment or planned reconfiguration |
+| `update` | Updates Xray binary, keeps config/keys | Routine upgrade |
+| `repair` | Reapplies saved state and hardening | Drift correction |
+| `status` | Service + ports + firewall summary | Fast health check |
+| `diagnose` | Unified diagnostics dump | Incident triage |
+| `reprint` | Regenerates client exports from saved state | Re-share configs safely |
+| `rotate-shortid` | Rotates shortIds only | Credential hygiene |
+| `uninstall` | Removes deployment components | Decommission |
+
+---
+
+## Generated Client Artifacts
+
+All client outputs are written under:
+
+```bash
+/root/xray-client-configs
+```
+
+File naming pattern (where `<profile>` is sanitized profile name):
+
+| File | Purpose |
+|---|---|
+| `<profile>-primary.uri.txt` | Primary `vless://` URI |
+| `<profile>-fallback.uri.txt` | Fallback URI (if configured) |
+| `<profile>-v2rayn-primary.json` | v2rayN JSON |
+| `<profile>-v2rayng-primary.json` | v2rayNG JSON |
+| `<profile>-sing-box-primary.json` | sing-box JSON |
+| `<profile>-shadowrocket-streisand-singbox-primary.json` | Apple client compatible copy |
+| `<profile>-shortids.txt` | All accepted shortIds |
+| `<profile>-summary.txt` | Deployment summary |
+| `<profile>-primary.uri.qr.txt` / `.png` | Primary QR (if `qrencode` available) |
+| `<profile>-fallback.uri.qr.txt` / `.png` | Fallback QR (if fallback configured) |
+
+> [!WARNING]
+> These files contain credentials and metadata. Keep them private and avoid posting screenshots publicly.
+
+---
+
+## Day-2 Operations Cookbook
+
+### Weekly maintenance
+
+```bash
+sudo /usr/local/sbin/xray-reality-bootstrap status
+sudo /usr/local/sbin/xray-reality-bootstrap diagnose
+```
+
+### Safe binary update
+
+```bash
+sudo /usr/local/sbin/xray-reality-bootstrap update
+```
+
+### Reapply full saved posture
+
+```bash
+sudo /usr/local/sbin/xray-reality-bootstrap repair
+```
+
+### Re-export client configs
+
+```bash
+sudo /usr/local/sbin/xray-reality-bootstrap reprint
+```
+
+### Rotate shortIds (keep UUID + keypair)
+
+```bash
+sudo /usr/local/sbin/xray-reality-bootstrap rotate-shortid
 ```
 
 ---
 
-## Troubleshooting
+## Troubleshooting Matrix
 
-If clients fail to connect:
+| Symptom | Most likely cause | Run this first | Typical fix |
+|---|---|---|---|
+| Client timeout on connect | DNS mismatch, blocked port, wrong dest | `sudo /usr/local/sbin/xray-reality-bootstrap diagnose` | Verify domain points to VPS IP; ensure port open in firewall; rerun install with correct `DEST_ENDPOINT` |
+| Wizard fails on REALITY destination probe | Target endpoint unreachable or TLS mismatch | `getent hosts <dest-domain>` and probe section output | Use a reachable TLS 1.3-capable target and matching `serverName`/`dest` |
+| `xray` service inactive | Config error or failed restart | `sudo journalctl -u xray -xe --no-pager` | Validate config with `xray -test`, then run `repair` |
+| No QR files generated | `qrencode` missing/unavailable | `command -v qrencode` | Run `reprint`; script attempts to install `qrencode` |
+| SSH lockout risk after hardening | Port/auth change without validated key login | Existing SSH session + `sshd` status | Keep second SSH session open; only disable password auth after key login verified |
+| Update timer not running | Policy set to manual or timer disabled | `systemctl status xray-update.timer` | Re-run install/repair and choose `weekly` or `daily` policy |
+| Clients fail after shortId rotation | Old client shortId still in use | `sudo /usr/local/sbin/xray-reality-bootstrap reprint` | Distribute newly exported configs to clients |
+| `status` shows unexpected open ports | Legacy rules or manual drift | `sudo /usr/local/sbin/xray-reality-bootstrap status` | Normalize via `repair`, then verify firewall manager (`nftables` or `ufw`) |
 
-1. Run:
-   ```bash
-   sudo bash xray_reality_bootstrap.sh diagnose
-   ```
-2. Check service logs:
-   ```bash
-   sudo journalctl -u xray -xe --no-pager
-   ```
-3. Validate config:
-   ```bash
-   sudo /usr/local/bin/xray -test -config /etc/xray/config.json
-   ```
-4. Confirm domain/DNS, destination endpoint correctness, and firewall rules.
+<details>
+<summary>Deep-dive diagnostic command bundle</summary>
+
+```bash
+sudo /usr/local/sbin/xray-reality-bootstrap diagnose
+sudo journalctl -u xray -p err -n 120 --no-pager
+sudo /usr/local/bin/xray -test -config /etc/xray/config.json
+sudo ss -lntp
+```
+
+</details>
 
 ---
 
-## Who this project is ideal for
+## Backup and Rollback
 
-- operators comfortable with Linux shell,
-- users who want a transparent script (not a black-box panel),
-- people running one/few nodes and valuing reproducibility.
+Before major changes (`install` reconfigure, `repair`, `update`), back up:
 
-If you need large-scale user lifecycle management, billing, role-based access, and dashboard workflows, you may outgrow this model and prefer a full management platform.
+```bash
+sudo tar czf /root/xray-backup-$(date +%F-%H%M).tgz /etc/xray /root/xray-client-configs /usr/local/sbin/xray-reality-bootstrap
+```
+
+Basic rollback approach:
+
+1. Restore files from backup archive.
+2. Re-run `repair` to reapply services/firewall/hardening from restored state.
+3. Validate with the [Post-Install Validation](#post-install-validation) checklist.
+
+---
+
+## Security Model and Hardening Notes
+
+- Firewall is enforced via `nftables` or `ufw`.
+- SSH hardening choices are applied during install flow.
+- Optional `fail2ban` and `unattended-upgrades` are integrated.
+- Logging profile can be tuned between `minimal` and `verbose`.
+- `rotate-shortid` helps refresh client identifiers without replacing full identity material.
+- Uninstall intentionally leaves generic security packages in place.
+
+Recommended operator habits:
+
+1. Keep SSH keys tested in a second session before auth changes.
+2. Restrict access to `/etc/xray` and `/root/xray-client-configs`.
+3. Rotate shared client credentials periodically.
+4. Run `diagnose` before manual edits.
+
+---
+
+## Glossary
+
+| Term | Meaning in this project |
+|---|---|
+| `VLESS` | Lightweight proxy protocol used for client-server transport |
+| `REALITY` | TLS-camouflage transport mode used by Xray |
+| `XTLS Vision` | Flow mode (`xtls-rprx-vision`) used in generated configs |
+| `serverName` | Domain value presented in REALITY/TLS behavior |
+| `dest` (`DEST_ENDPOINT`) | Upstream destination target used for REALITY behavior |
+| `shortId` | REALITY identifier; server can accept multiple values |
+| `reprint` | Regenerates client outputs without rotating core secrets |
+| `repair` | Reapplies saved state and hardening to correct drift |
+
+---
+
+## FAQ
+
+<details>
+<summary>Is this a panel?</summary>
+
+No. It is a single Bash bootstrap focused on transparent single-node operations, not a multi-user management panel.
+
+</details>
+
+<details>
+<summary>Can I run this on CentOS/RHEL/Alpine?</summary>
+
+No. Current script checks only Debian 12, Ubuntu 22.04, and Ubuntu 24.04.
+
+</details>
+
+<details>
+<summary>Can I install non-interactively?</summary>
+
+Yes. Use `install --auto --non-interactive` and provide a valid options profile JSON.
+
+</details>
+
+<details>
+<summary>Does this guarantee bypass on every network?</summary>
+
+No. It improves resilience characteristics, but results vary by network controls, endpoint hygiene, and operational choices.
+
+</details>
+
+<details>
+<summary>How do I safely share client configs?</summary>
+
+Use `reprint`, share only necessary artifacts per user/device, and treat all exported files as secrets.
+
+</details>
 
 ---
 
 ## License
 
-MIT (see `LICENSE`).
+MIT. See `LICENSE`.
